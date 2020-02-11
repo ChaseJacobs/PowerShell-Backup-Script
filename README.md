@@ -1,4 +1,3 @@
-########################################################
 # Forked from
 # Doc: http://www.techguy.at/tag/backupscript/
 
