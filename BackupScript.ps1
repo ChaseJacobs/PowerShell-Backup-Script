@@ -1,76 +1,44 @@
 ﻿########################################################
+# Forked from: http://www.techguy.at/tag/backupscript/
 # Name: BackupScript.ps1                              
-# Creator: Michael Seidl aka Techguy                    
-# CreationDate: 21.01.2014                              
-# LastModified: 19.02.2019                               
-# Version: 1.4
-# Doc: http://www.techguy.at/tag/backupscript/
-# PSVersion tested: 3 and 4
-#
-# Description: Copies the Bakupdirs to the Destination
-# You can configure more than one Backupdirs, every Dir
-# wil be copied to the Destination. A Progress Bar
-# is showing the Status of copied MB to the total MB
-# Only Change Variables in Variables Section
-# Change LoggingLevel to 3 an get more output in Powershell Windows
-# 
-#
-# Beschreibung: Kopiert die BackupDirs in den Destination
-# Ordner. Es können mehr als nur ein Ordner angegeben
-# werden. Der Prozess wid mit einem Statusbar angezeigt
-# diese zeigt die kopieren MB im Vergleich zu den gesamten
-# MB an.
-# Nur die Werte unter Variables ändern
-# Ändere den Logginglevel zu 3 und erhalte die gesamte Ausgabe im PS Fenster
-# Version 1.4
-#               NEW: 7ZIP Support
-#               FIX: Ordering at old Backup deletion
-#               FIX: Exclude Dir is now working
-#               NEW: Staging folder for ZIP
-# Version 1.3 - NEW: Send Mail Function
-#               NEW: Backup Destination will be zipped
-#               NEW: Exclude Dir
-#               FIX: Logging Level
-#               FIX: Delete old Folder by CreationTime
-#
-# Version 1.2 - FIX: Delete last Backup dirs, changed to support older PS Version
-#               FIX: Fixed the Count in the Statusbar
-#               FIX: Fixed Location Count in Statusbar
-#
-# Version 1.1 - CHANGE: Enhanced the Logging to a Textfile and write output, copy Log file to Backupdir
-#             - FIX: Renamed some Variables an have done some cosmetic changes
-#             - CHANGE: Define the Log Name in Variables
-#
-# Version 1.0 - RTM
+# Creator: Chase Jacobs
+# CreationDate: 2020.02.11                              
+# LastModified: 2020.02.11                               
+# Version: 1
 ########################################################
-#
-# www.techguy.at                                        
-# www.facebook.com/TechguyAT                            
-# www.twitter.com/TechguyAT                             
-# michael@techguy.at 
 
-#
-#
-########################################################
+#Description: Copies the Bakupdirs to the Destination
+#You can configure more than one Backupdirs, every Dir
+#wil be copied to the Destination. A Progress Bar
+#is showing the Status of copied MB to the total MB
+#Only Change Variables in Variables Section
+#Change LoggingLevel to 3 an get more output in Powershell Windows
+
+
+
+param (
+[string]$source = "C:\Users\chase\Google Drive\Books",
+[string]$destination = "C:\Users\chase\Downloads\Backup",
+[string]$stage = "C:\Users\chase\Downloads\Stage"
+)
 
 #Variables, only Change here
-$Destination="\\SVATHOME002\Backup$\NB BaseIT" #Copy the Files to this Location
+$Destination=$destination #Copy the Files to this Location
 #$Destination="C:\Users\seimi\Downloads"
-$Staging="C:\Users\seimi\Downloads\Staging"
+$Staging=$stage
 $ClearStaging=$true # When $true, Staging Dir will be cleared
 $Versions="5" #How many of the last Backups you want to keep
-$BackupDirs="C:\Users\seimi\OneDrive - Seidl Michael" #What Folders you want to backup
+$BackupDirs=$source #What Folders you want to backup
 
-$ExcludeDirs="C:\Users\seimi\OneDrive - Seidl Michael\0-Temp","C:\Users\seimi\OneDrive - Seidl Michael\0-Temp\Dir2" #This list of Directories will not be copied
+$ExcludeDirs="" #This list of Directories will not be copied
 
 $LogName="Log.txt" #Log Name
 $LoggingLevel="3" #LoggingLevel only for Output in Powershell Window, 1=smart, 3=Heavy
 $Zip=$true #Zip the Backup Destination
-$Use7ZIP=$true #Make sure it is installed
-$RemoveBackupDestination=$false #Remove copied files after Zip, only if $Zip is true
-$UseStaging=$false #only if you use ZIP, than we copy file to Staging, zip it and copy the ZIP to destination, like Staging, and to save NetworkBandwith
+$RemoveBackupDestination=$true #Remove copied files after Zip, only if $Zip is true
+$UseStaging=$true #only if you use ZIP, than we copy file to Staging, zip it and copy the ZIP to destination, like Staging, and to save NetworkBandwith
 
-
+$ErrorActionPreference = "Stop"
 
 #Send Mail Settings
 $SendEmail = $false                    # = $true if you want to enable send report to e-mail (SMTP send)
@@ -170,6 +138,12 @@ function Check-Dir {
         return $false
         Logging "Error" "$Destination does not exist"
     }
+    if ($UseStaging) {
+		if (!(Test-Path $Staging)) {
+			return $false
+			Logging "Error" "$Staging does not exist"
+		}
+	}
 }
 
 #Save all the Files
@@ -222,6 +196,9 @@ Function Make-Backup {
     Logging "INFO" "----------------------"
     Logging "INFO" "Copied $SumCount files with $SumTotalMB"
     Logging "INFO" "$ErrorCount Files could not be copied"
+	if($ErrorCount -ne 0){
+	  exit 1
+	}
 
 
     # Send e-mail with reports as attachments
@@ -268,6 +245,7 @@ $CheckDir=Check-Dir
 
 if ($CheckDir -eq $false) {
     Logging "ERROR" "One of the Directory are not available, Script has stopped"
+	exit 1
 } else {
     Make-Backup
 
@@ -283,45 +261,47 @@ if ($CheckDir -eq $false) {
     if ($Zip)
     {
         Logging "INFO" "Compress the Backup Destination"
-        
-        if ($Use7ZIP)
-        {
-            Logging "INFO" "Use 7ZIP"
-            if (-not (test-path "$env:ProgramFiles\7-Zip\7z.exe")) {Logging "WARNING" "7Zip not found"} 
-            set-alias sz "$env:ProgramFiles\7-Zip\7z.exe" 
-            #sz a -t7z "$directory\$zipfile" "$directory\$name"    
-                    
-            if ($UseStaging -and $Zip)
-            {
-                $Zip=$Staging+("\"+$Backupdir.Replace($Staging,'').Replace('\','')+".zip")
-                sz a -t7z $Zip $Backupdir
-                
-                Logging "INFO" "Move Zip to Destination"
-                Move-Item -Path $Zip -Destination $Destination
+		Logging "INFO" "Use Powershell Compress-Archive"
+	
+		if ($UseStaging -and $Zip)
+		{
+			Logging "INFO" "Zippping to Staging"
+			$text = "Zippping to "+$Staging
+			Logging "INFO" $text
+			
+			$Zip=$Staging+("\"+$Backupdir.Replace($Staging,'').Replace('\','')+".zip")  
 
-                if ($ClearStaging)
-                {
-                Logging "INFO" "Clear Staging"
-                Get-ChildItem -Path $Staging -Recurse -Force | remove-item -Confirm:$false -Recurse
-                }
+			$text = "Zippping file "+$Zip
+			Logging "INFO" $text
+			
+			Compress-Archive -Path $Backupdir -DestinationPath $Zip -CompressionLevel Optimal -Force
+			
+			Logging "INFO" "Move Zip to Destination"
+			$text = "Moving to "+$Destination
+			Logging "INFO" $text
+			
+			Copy-Item -Path $Zip -Destination $Destination
 
-            }
-            else
-            {
-                sz a -t7z ($Destination+("\"+$Backupdir.Replace($Destination,'').Replace('\','')+".zip")) $Backupdir
-            }
-                
-        }
-        else
-        {
-        Logging "INFO" "Use Powershell Compress-Archive"
-        Compress-Archive -Path $Backupdir -DestinationPath ($Destination+("\"+$Backupdir.Replace($Destination,'').Replace('\','')+".zip")) -CompressionLevel Optimal -Force
+			if ($ClearStaging)
+			{
+				Logging "INFO" "Clear Staging"
+				#Get-ChildItem -Path $Staging -Recurse -Force | remove-item -Confirm:$false -Recurse
+				Get-ChildItem -Path $Staging -Include *.* -Recurse | foreach { $_.Delete()}
+			}
 
-        }
+		}
+		else
+		{
+			Logging "INFO" "Zippping to Destination"
+			$text = "Destination is "+$Destination
+			Logging "INFO" $text
+			
+			$dest=$Destination+("\"+$Backupdir.Replace($Destination,'').Replace('\','')+".zip")  
 
-
-
-
+			$text = "Zippping file "+$dest
+			Logging "INFO" $text
+			Compress-Archive -Path $Backupdir -DestinationPath $dest -CompressionLevel Optimal -Force
+		}
 
 
         If ($RemoveBackupDestination)
@@ -335,9 +315,7 @@ if ($CheckDir -eq $false) {
     }
 }
 
-Write-Host "Press any key to close ..."
-
-$x = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-
-
-
+Write-Host "Done"
+$text = "Exit Code: "+$LastExitCode
+Write-Host $text
+exit $LastExitCode

@@ -1,5 +1,11 @@
-# Forked from
-# Doc: http://www.techguy.at/tag/backupscript/
+########################################################
+# Forked from: http://www.techguy.at/tag/backupscript/
+# Name: BackupScript.ps1                              
+# Creator: Chase Jacobs
+# CreationDate: 2020.02.11                              
+# LastModified: 2020.02.11                               
+# Version: 1
+########################################################
 
 Description: Copies the Bakupdirs to the Destination
 You can configure more than one Backupdirs, every Dir
