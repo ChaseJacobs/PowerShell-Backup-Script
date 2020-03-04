@@ -1,0 +1,7 @@
+BACKUPPS1PATH=C:\Users\chase\OneDrive\Desktop\PowerShell-Backup-Script-master\BackupScript.ps1
+SOURCE=C:\Users\chase\Google Drive
+STAGE=C:\Users\chase\Downloads\Stage
+DESTINATION=C:\Users\chase\Downloads\Backup
+
+
+powershell -File $ENV:BACKUPPS1PATH -source $ENV:Source -stage $ENV:STAGE -destination $ENV:DESTINATION
