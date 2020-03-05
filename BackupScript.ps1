@@ -87,24 +87,6 @@ Function Create-BackupDestinationdir {
     Logging "INFO" "Create BackupDestinationdir $BackupDestinationdir"
 }
 
-#Delete BackupDestinationdir
-Function Delete-BackupDestinationdir {
-    $Folder=Get-ChildItem $Destination | where {$_.Attributes -eq "Directory"} | Sort-Object -Property CreationTime -Descending:$false | Select-Object -First 1
-
-    Logging "INFO" "Remove Dir: $Folder"
-    
-    $Folder.FullName | Remove-Item -Recurse -Force 
-}
-
-#Delete Zip
-Function Delete-Zip {
-    $Zip=Get-ChildItem $Destination | where {$_.Attributes -eq "Archive" -and $_.Extension -eq ".zip"} |  Sort-Object -Property CreationTime -Descending:$false |  Select-Object -First 1
-
-    Logging "INFO" "Remove Zip: $Zip"
-    
-    $Zip.FullName | Remove-Item -Recurse -Force 
-}
-
 #Check if BackupSourcedir and Destination is available
 function Check-Dir {
     Logging "INFO" "Check if BackupSourcedir and Destination exists"
@@ -141,6 +123,23 @@ Function Make-Backup {
 	}
 }
 
+#Delete BackupDestinationdir
+Function Delete-BackupDestinationdir {
+    $Folder=Get-ChildItem $Destination | where {$_.Attributes -eq "Directory"} | Sort-Object -Property CreationTime -Descending:$false | Select-Object -First 1
+
+    Logging "INFO" "Remove Dir: $Folder"
+    
+    $Folder.FullName | Remove-Item -Recurse -Force 
+}
+
+#Delete Zip
+Function Delete-Zip {
+    $Zip=Get-ChildItem $Destination | where {$_.Attributes -eq "Archive" -and $_.Extension -eq ".zip"} |  Sort-Object -Property CreationTime -Descending:$false |  Select-Object -First 1
+
+    Logging "INFO" "Remove Zip: $Zip"
+    
+    $Zip.FullName | Remove-Item -Recurse -Force 
+}
 
 #create Backup Dir
 Create-BackupDestinationdir
@@ -178,20 +177,23 @@ if ($CheckDir -eq $false) {
 $Count=(Get-ChildItem $Destination | where {$_.Attributes -eq "Directory"}).count
 Logging "INFO" "Check if there are more than $Versions Directories in the BackupDestinationdir"
 
-if ($count -gt ($Versions-1)) 
+while ($Count -gt ($Versions))
 {
-
+	Logging "INFO" "Found $Count Directories in the BackupDestinationdir"
     Delete-BackupDestinationdir
+	$Count=(Get-ChildItem $Destination | where {$_.Attributes -eq "Directory"}).count
+	Logging "INFO" "Check if there are more than $Versions Directories in the BackupDestinationdir"
 }
 
 
 $CountZip=(Get-ChildItem $Destination | where {$_.Attributes -eq "Archive" -and $_.Extension -eq ".zip"}).count
 Logging "INFO" "Check if there are more than $Versions Zip in the BackupDestinationdir"
 
-if ($CountZip -gt ($Versions-1)) {
-
-    Delete-Zip 
-
+while ($CountZip -gt ($Versions)) {
+	Logging "INFO" "Found $Count Zip in the BackupDestinationdir"
+    Delete-Zip
+	$CountZip=(Get-ChildItem $Destination | where {$_.Attributes -eq "Archive" -and $_.Extension -eq ".zip"}).count
+	Logging "INFO" "Check if there are more than $Versions Zip in the BackupDestinationdir"
 }
 
 Write-Host "Done"
