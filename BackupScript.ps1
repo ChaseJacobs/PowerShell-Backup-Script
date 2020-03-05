@@ -8,7 +8,7 @@
 ########################################################
 
 #Description: Copies the Bakupdirs to the Destination
-#You can configure more than one BackupDestinationdirs, every Dir
+#You can configure more than one BackupSourcedir, every Dir
 #wil be copied to the Destination. A Progress Bar
 #is showing the Status of copied MB to the total MB
 #Only Change Variables in Variables Section
@@ -24,11 +24,10 @@ param (
 
 #Variables, only Change here
 $Destination=$destination #Copy the Files to this Location
-#$Destination="C:\Users\seimi\Downloads"
 $Staging=$stage
 $ClearStaging=$true # When $true, Staging Dir will be cleared
 $Versions="5" #How many of the last Backups you want to keep
-$BackupDestinationdirs=$source #What Folders you want to backup
+$BackupSourcedir=$source #What Folders you want to backup
 
 $ExcludeDirs="" #This list of Directories will not be copied
 
@@ -117,12 +116,12 @@ Function Delete-Zip {
     $Zip.FullName | Remove-Item -Recurse -Force 
 }
 
-#Check if BackupDestinationdirs and Destination is available
+#Check if BackupSourcedir and Destination is available
 function Check-Dir {
-    Logging "INFO" "Check if BackupDestinationdir and Destination exists"
-    if (!(Test-Path $BackupDestinationdirs)) {
+    Logging "INFO" "Check if BackupSourcedir and Destination exists"
+    if (!(Test-Path $BackupSourcedir)) {
         return $false
-        Logging "Error" "$BackupDestinationdirs does not exist"
+        Logging "Error" "$BackupSourcedir does not exist"
     }
     if (!(Test-Path $Destination)) {
         return $false
@@ -146,54 +145,39 @@ Function Make-Backup {
     $colItems=0
     Logging "INFO" "Count all files and create the Top Level Directories"
 
-    foreach ($Backup in $BackupDestinationdirs) {
-        $colItems = (Get-ChildItem $Backup -recurse | Where-Object {$_.mode -notmatch "h"} | Measure-Object -property length -sum) 
-        $Items=0
-        $FilesCount += Get-ChildItem $Backup -Recurse | Where-Object {$_.mode -notmatch "h"}  
-        <#
-		Copy-Item -Path $Backup -Destination $BackupDestinationdir -Force -ErrorAction SilentlyContinue
-        #>
-		$SumMB+=$colItems.Sum.ToString()
-        $SumItems+=$colItems.Count
-    }
 
-    $TotalMB="{0:N2}" -f ($SumMB / 1MB) + " MB of Files"
-    Logging "INFO" "There are $SumItems Files with  $TotalMB to copy"
+	$colItems = (Get-ChildItem $BackupSourcedir -recurse | Where-Object {$_.mode -notmatch "h"} | Measure-Object -property length -sum) 
+	$Items=0
+	$FilesCount += Get-ChildItem $BackupSourcedir -Recurse | Where-Object {$_.mode -notmatch "h"}  
 
-    foreach ($Backup in $BackupDestinationdirs) {
-        $Index=$Backup.LastIndexOf("\")
-        $SplitBackup=$Backup.substring(0,$Index)
-        $Files = Get-ChildItem $Backup -Recurse  | select * | Where-Object {$_.mode -notmatch "h"} | select fullname
+	$SumMB+=$colItems.Sum.ToString()
+	$SumItems+=$colItems.Count
+	
+	$TotalMB="{0:N2}" -f ($SumMB / 1MB) + " MB of Files"
+	Logging "INFO" "There are $SumItems Files with  $TotalMB to copy"		
 
-        foreach ($File in $Files) {
-            $restpath = $file.fullname.replace($SplitBackup,"")
-            try {
-                Copy-Item  $file.fullname $($BackupDestinationdir+$restpath) -Force -ErrorAction SilentlyContinue |Out-Null
-                Logging "INFO" "$file was copied"
-            }
-            catch {
-                $ErrorCount++
-                Logging "ERROR" "$file returned an error an was not copied"
-            }
-            $Items += (Get-item $file.fullname).Length
-            $status = "Copy file {0} of {1} and copied {3} MB of {4} MB: {2}" -f $count,$SumItems,$file.Name,("{0:N2}" -f ($Items / 1MB)).ToString(),("{0:N2}" -f ($SumMB / 1MB)).ToString()
-            $Index=[array]::IndexOf($BackupDestinationdirs,$Backup)+1
-            $Text="Copy data Location {0} of {1}" -f $Index ,$BackupDestinationdirs.Count
-            Write-Progress -Activity $Text $status -PercentComplete ($Items / $SumMB*100)  
-			
-			Logging "INFO" "$Temp $status"
-			
-            if ($File.Attributes -ne "Directory") {$count++}
-        }
-    }
+	Logging "INFO" "Before robocopy exit code: $LASTEXITCODE"
+
+	if ($LASTEXITCODE -gt 0) {
+		Logging "Error" "$Before Robocopy Error"
+		exit 1
+	}
+
+	robocopy $BackupSourcedir $BackupDestinationdir /mir /R:5 /W:5
+
+	Logging "INFO" "robocopy exit code: $LASTEXITCODE"
+	if ($LASTEXITCODE -gt 4) {
+		Logging "Error" "$Robocopy Error"
+		exit 1
+	}
+	else {
+		$LASTEXITCODE = 0
+	}
+
     $SumCount+=$Count
     $SumTotalMB="{0:N2}" -f ($Items / 1MB) + " MB of Files"
     Logging "INFO" "----------------------"
     Logging "INFO" "Copied $SumCount files with $SumTotalMB"
-    Logging "INFO" "$ErrorCount Errors Recieved"
-	if($ErrorCount -ne 0){
-	  exit 1
-	}
 }
 
 
@@ -242,65 +226,9 @@ if ($CheckDir -eq $false) {
     Logging "INFO" "Backupduration $Minutes Minutes and $Seconds Seconds"
     Logging "INFO" "----------------------"
     Logging "INFO" "----------------------" 
-
-    if ($Zip)
-    {
-        Logging "INFO" "Compress the Backup Destination"
-		Logging "INFO" "Use Powershell Compress-Archive"
-	
-		if ($UseStaging -and $Zip)
-		{
-			Logging "INFO" "Zippping to Staging"
-			$text = "Zippping to "+$Staging
-			Logging "INFO" $text
-			
-			$Zip=$Staging+("\"+$BackupDestinationdir.Replace($Staging,'').Replace('\','')+".zip")  
-
-			$text = "Zippping file "+$Zip
-			Logging "INFO" $text
-			
-			Compress-Archive -Path $BackupDestinationdir -DestinationPath $Zip -CompressionLevel Optimal -Force
-			
-			Logging "INFO" "Move Zip to Destination"
-			$text = "Moving to "+$Destination
-			Logging "INFO" $text
-			
-			Copy-Item -Path $Zip -Destination $Destination
-
-			if ($ClearStaging)
-			{
-				Logging "INFO" "Clear Staging"
-				#Get-ChildItem -Path $Staging -Recurse -Force | remove-item -Confirm:$false -Recurse
-				Get-ChildItem -Path $Staging -Include *.* -Recurse | foreach { $_.Delete()}
-			}
-
-		}
-		else
-		{
-			Logging "INFO" "Zippping to Destination"
-			$text = "Destination is "+$Destination
-			Logging "INFO" $text
-			
-			$dest=$Destination+("\"+$BackupDestinationdir.Replace($Destination,'').Replace('\','')+".zip")  
-
-			$text = "Zippping file "+$dest
-			Logging "INFO" $text
-			Compress-Archive -Path $BackupDestinationdir -DestinationPath $dest -CompressionLevel Optimal -Force
-		}
-
-
-        If ($RemoveBackupDestination)
-        {
-            Logging "INFO" "Backupduration $Minutes Minutes and $Seconds Seconds"
-
-            #Remove-Item -Path $BackupDestinationdir -Force -Recurse 
-            get-childitem -Path $BackupDestinationdir -recurse -Force  | remove-item -Confirm:$false -Recurse
-            get-item -Path $BackupDestinationdir   | remove-item -Confirm:$false -Recurse
-        }
-    }
 }
 
 Write-Host "Done"
 $text = "Exit Code: "+$LastExitCode
 Write-Host $text
-exit $LastExitCode
+exit 0
