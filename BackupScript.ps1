@@ -137,35 +137,12 @@ function Check-Dir {
 
 #Save all the Files
 Function Make-Backup {
-    Logging "INFO" "Started the Backup"
-    $Files=@()
-    $SumMB=0
-    $SumItems=0
-    $SumCount=0
-    $colItems=0
-    Logging "INFO" "Count all files and create the Top Level Directories"
-
-
-	$colItems = (Get-ChildItem $BackupSourcedir -recurse | Where-Object {$_.mode -notmatch "h"} | Measure-Object -property length -sum) 
-	$Items=0
-	$FilesCount += Get-ChildItem $BackupSourcedir -Recurse | Where-Object {$_.mode -notmatch "h"}  
-
-	$SumMB+=$colItems.Sum.ToString()
-	$SumItems+=$colItems.Count
-	
-	$TotalMB="{0:N2}" -f ($SumMB / 1MB) + " MB of Files"
-	Logging "INFO" "There are $SumItems Files with  $TotalMB to copy"		
-
-	Logging "INFO" "Before robocopy exit code: $LASTEXITCODE"
-
-	if ($LASTEXITCODE -gt 0) {
-		Logging "Error" "$Before Robocopy Error"
-		exit 1
-	}
+    Logging "INFO" "Started the Backup"	
 
 	robocopy $BackupSourcedir $BackupDestinationdir /mir /R:5 /W:5
 
 	Logging "INFO" "robocopy exit code: $LASTEXITCODE"
+	
 	if ($LASTEXITCODE -gt 4) {
 		Logging "Error" "$Robocopy Error"
 		exit 1
@@ -173,11 +150,6 @@ Function Make-Backup {
 	else {
 		$LASTEXITCODE = 0
 	}
-
-    $SumCount+=$Count
-    $SumTotalMB="{0:N2}" -f ($Items / 1MB) + " MB of Files"
-    Logging "INFO" "----------------------"
-    Logging "INFO" "Copied $SumCount files with $SumTotalMB"
 }
 
 
@@ -216,6 +188,12 @@ if ($CheckDir -eq $false) {
     Logging "ERROR" "One of the Directory are not available, Script has stopped"
 	exit 1
 } else {
+
+	if ($LASTEXITCODE -gt 0) {
+		Logging "Error" "$Before backup Error"
+		exit 1
+	}
+
     Make-Backup
 
     $Enddate=Get-Date #-format dd.MM.yyyy-HH:mm:ss
@@ -223,6 +201,8 @@ if ($CheckDir -eq $false) {
     $Minutes=$span.Minutes
     $Seconds=$Span.Seconds
 
+    Logging "INFO" "----------------------"
+    Logging "INFO" "----------------------"
     Logging "INFO" "Backupduration $Minutes Minutes and $Seconds Seconds"
     Logging "INFO" "----------------------"
     Logging "INFO" "----------------------" 
