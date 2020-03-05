@@ -178,7 +178,7 @@ if ($CheckDir -eq $false) {
 $Count=(Get-ChildItem $Destination | where {$_.Attributes -eq "Directory"}).count
 Logging "INFO" "Check if there are more than $Versions Directories in the BackupDestinationdir"
 
-if ($count -gt $Versions) 
+if ($count -gt ($Versions-1)) 
 {
 
     Delete-BackupDestinationdir
@@ -188,7 +188,7 @@ if ($count -gt $Versions)
 $CountZip=(Get-ChildItem $Destination | where {$_.Attributes -eq "Archive" -and $_.Extension -eq ".zip"}).count
 Logging "INFO" "Check if there are more than $Versions Zip in the BackupDestinationdir"
 
-if ($CountZip -gt $Versions) {
+if ($CountZip -gt ($Versions-1)) {
 
     Delete-Zip 
 
