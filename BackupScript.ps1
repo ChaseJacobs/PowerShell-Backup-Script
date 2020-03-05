@@ -96,7 +96,6 @@ Function Delete-BackupDestinationdir {
     $Folder.FullName | Remove-Item -Recurse -Force 
 }
 
-
 #Delete Zip
 Function Delete-Zip {
     $Zip=Get-ChildItem $Destination | where {$_.Attributes -eq "Archive" -and $_.Extension -eq ".zip"} |  Sort-Object -Property CreationTime -Descending:$false |  Select-Object -First 1
@@ -144,32 +143,9 @@ Function Make-Backup {
 
 
 #create Backup Dir
-
-
-
 Create-BackupDestinationdir
 Logging "INFO" "----------------------"
 Logging "INFO" "Start the Script"
-
-#Check if BackupDestinationdir needs to be cleaned and create BackupDestinationdir
-$Count=(Get-ChildItem $Destination | where {$_.Attributes -eq "Directory"}).count
-Logging "INFO" "Check if there are more than $Versions Directories in the BackupDestinationdir"
-
-if ($count -gt $Versions) 
-{
-
-    Delete-BackupDestinationdir
-}
-
-
-$CountZip=(Get-ChildItem $Destination | where {$_.Attributes -eq "Archive" -and $_.Extension -eq ".zip"}).count
-Logging "INFO" "Check if there are more than $Versions Zip in the BackupDestinationdir"
-
-if ($CountZip -gt $Versions) {
-
-    Delete-Zip 
-
-}
 
 #Check if all Dir are existing and do the Backup
 $CheckDir=Check-Dir
@@ -196,6 +172,26 @@ if ($CheckDir -eq $false) {
     Logging "INFO" "Backupduration $Minutes Minutes and $Seconds Seconds"
     Logging "INFO" "----------------------"
     Logging "INFO" "----------------------" 
+}
+
+#Check if BackupDestinationdir needs to be cleaned
+$Count=(Get-ChildItem $Destination | where {$_.Attributes -eq "Directory"}).count
+Logging "INFO" "Check if there are more than $Versions Directories in the BackupDestinationdir"
+
+if ($count -gt $Versions) 
+{
+
+    Delete-BackupDestinationdir
+}
+
+
+$CountZip=(Get-ChildItem $Destination | where {$_.Attributes -eq "Archive" -and $_.Extension -eq ".zip"}).count
+Logging "INFO" "Check if there are more than $Versions Zip in the BackupDestinationdir"
+
+if ($CountZip -gt $Versions) {
+
+    Delete-Zip 
+
 }
 
 Write-Host "Done"
