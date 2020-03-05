@@ -180,19 +180,6 @@ Function Make-Backup {
             Write-Progress -Activity $Text $status -PercentComplete ($Items / $SumMB*100)  
             if ($File.Attributes -ne "Directory") {$count++}
         }
-
-        <#try {
-            Copy-Item  $file.fullname $($Backupdir+$restpath) -Force -ErrorAction SilentlyContinue |Out-Null
-
-            New-Item -Path $pathDir -ItemType Directory
-            Robocopy "C:\Users\Greg Shultz" "F:\TheBackup" /MIR /XA:SH /XD AppData /XJD /R:5 /W:15 /MT:32
-
-            Logging "INFO" "$file was copied"
-        }
-        catch {
-            $ErrorCount++
-            Logging "ERROR" "$file returned an error an was not copied"
-        }#>
     }
     $SumCount+=$Count
     $SumTotalMB="{0:N2}" -f ($Items / 1MB) + " MB of Files"
