@@ -31,7 +31,6 @@ $BackupSourcedir=$source #What Folders you want to backup
 
 $ExcludeDirs="" #This list of Directories will not be copied
 
-$LogName="Log.txt" #Log Name
 $LoggingLevel="3" #LoggingLevel only for Output in Powershell Window, 1=smart, 3=Heavy
 $Zip=$false #Zip the Backup Destination
 $RemoveBackupDestination=$false #Remove copied files after Zip, only if $Zip is true
@@ -64,9 +63,6 @@ else
     $BackupDestinationdir=$Destination +"\Backup-"+ (Get-Date -format yyyy-MM-dd)+"-"+(Get-Random -Maximum 100000)+"\"
 }
 
-#$BackupDestinationdirTemp=$Temp +"\Backup-"+ (Get-Date -format yyyy-MM-dd)+"-"+(Get-Random -Maximum 100000)+"\"
-$Log=$BackupDestinationdir+$LogName
-$Log
 $Items=0
 $Count=0
 $ErrorCount=0
@@ -77,16 +73,10 @@ $StartDate=Get-Date #-format dd.MM.yyyy-HH:mm:ss
 Function Logging ($State, $Message) {
     $Datum=Get-Date -format dd.MM.yyyy-HH:mm:ss
 
-    if (!(Test-Path -Path $Log)) {
-        New-Item -Path $Log -ItemType File | Out-Null
-    }
     $Text="$Datum - $State"+":"+" $Message"
 
     if ($LoggingLevel -eq "1" -and $Message -notmatch "was copied") {Write-Host $Text}
-    elseif ($LoggingLevel -eq "3") {Write-Host $Text}
-   
-    add-Content -Path $Log -Value $Text
-    
+    elseif ($LoggingLevel -eq "3") {Write-Host $Text}   
 }
 
 
@@ -143,7 +133,7 @@ Function Make-Backup {
 
 	Logging "INFO" "robocopy exit code: $LASTEXITCODE"
 	
-	if ($LASTEXITCODE -gt 4) {
+	if ($LASTEXITCODE -gt 3) {
 		Logging "Error" "$Robocopy Error"
 		exit 1
 	}
