@@ -40,14 +40,6 @@ $UseStaging=$true #only if you use ZIP, than we copy file to Staging, zip it and
 
 $ErrorActionPreference = "Stop"
 
-#Send Mail Settings
-$SendEmail = $false                    # = $true if you want to enable send report to e-mail (SMTP send)
-$EmailTo   = 'test@domain.com'              #user@domain.something (for multiple users use "User01 &lt;user01@example.com&gt;" ,"User02 &lt;user02@example.com&gt;" )
-$EmailFrom = 'from@domain.com'   #matthew@domain 
-$EmailSMTP = 'smtp.domain.com' #smtp server adress, DNS hostname.
-
-
-#STOP-no changes from here
 #STOP-no changes from here
 #Settings - do not change anything from here
 
@@ -72,8 +64,6 @@ else
     #Logging "INFO" "Use orig Backup Dir"
     $Backupdir=$Destination +"\Backup-"+ (Get-Date -format yyyy-MM-dd)+"-"+(Get-Random -Maximum 100000)+"\"
 }
-
-
 
 #$BackupdirTemp=$Temp +"\Backup-"+ (Get-Date -format yyyy-MM-dd)+"-"+(Get-Random -Maximum 100000)+"\"
 $Log=$Backupdir+$LogName
@@ -171,7 +161,7 @@ Function Make-Backup {
     foreach ($Backup in $BackupDirs) {
         $Index=$Backup.LastIndexOf("\")
         $SplitBackup=$Backup.substring(0,$Index)
-        $Files = Get-ChildItem $Backup -Recurse  | select * | Where-Object {$_.mode -notmatch "h" -and $_.fullname -notmatch $exclude} | select fullname #$_.mode -notmatch "h" -and 
+        $Files = Get-ChildItem $Backup -Recurse  | select * | Where-Object {$_.mode -notmatch "h"} | select fullname
 
         foreach ($File in $Files) {
             $restpath = $file.fullname.replace($SplitBackup,"")
@@ -190,25 +180,28 @@ Function Make-Backup {
             Write-Progress -Activity $Text $status -PercentComplete ($Items / $SumMB*100)  
             if ($File.Attributes -ne "Directory") {$count++}
         }
+
+        <#try {
+            Copy-Item  $file.fullname $($Backupdir+$restpath) -Force -ErrorAction SilentlyContinue |Out-Null
+
+            New-Item -Path $pathDir -ItemType Directory
+            Robocopy "C:\Users\Greg Shultz" "F:\TheBackup" /MIR /XA:SH /XD AppData /XJD /R:5 /W:15 /MT:32
+
+            Logging "INFO" "$file was copied"
+        }
+        catch {
+            $ErrorCount++
+            Logging "ERROR" "$file returned an error an was not copied"
+        }#>
     }
     $SumCount+=$Count
     $SumTotalMB="{0:N2}" -f ($Items / 1MB) + " MB of Files"
     Logging "INFO" "----------------------"
     Logging "INFO" "Copied $SumCount files with $SumTotalMB"
-    Logging "INFO" "$ErrorCount Files could not be copied"
+    Logging "INFO" "$ErrorCount Errors Recieved"
 	if($ErrorCount -ne 0){
 	  exit 1
 	}
-
-
-    # Send e-mail with reports as attachments
-    if ($SendEmail -eq $true) {
-        $EmailSubject = "Backup Email $(get-date -format MM.yyyy)"
-        $EmailBody = "Backup Script $(get-date -format MM.yyyy) (last Month).`nYours sincerely `Matthew - SYSTEM ADMINISTRATOR"
-        Logging "INFO" "Sending e-mail to $EmailTo from $EmailFrom (SMTPServer = $EmailSMTP) "
-        ### the attachment is $log 
-        Send-MailMessage -To $EmailTo -From $EmailFrom -Subject $EmailSubject -Body $EmailBody -SmtpServer $EmailSMTP -attachment $Log 
-    }
 }
 
 
