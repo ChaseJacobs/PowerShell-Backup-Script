@@ -34,9 +34,9 @@ $ExcludeDirs="" #This list of Directories will not be copied
 
 $LogName="Log.txt" #Log Name
 $LoggingLevel="3" #LoggingLevel only for Output in Powershell Window, 1=smart, 3=Heavy
-$Zip=$true #Zip the Backup Destination
-$RemoveBackupDestination=$true #Remove copied files after Zip, only if $Zip is true
-$UseStaging=$true #only if you use ZIP, than we copy file to Staging, zip it and copy the ZIP to destination, like Staging, and to save NetworkBandwith
+$Zip=$false #Zip the Backup Destination
+$RemoveBackupDestination=$false #Remove copied files after Zip, only if $Zip is true
+$UseStaging=$false #only if you use ZIP, than we copy file to Staging, zip it and copy the ZIP to destination, like Staging, and to save NetworkBandwith
 
 $ErrorActionPreference = "Stop"
 
@@ -150,8 +150,10 @@ Function Make-Backup {
         $colItems = (Get-ChildItem $Backup -recurse | Where-Object {$_.mode -notmatch "h"} | Measure-Object -property length -sum) 
         $Items=0
         $FilesCount += Get-ChildItem $Backup -Recurse | Where-Object {$_.mode -notmatch "h"}  
-        Copy-Item -Path $Backup -Destination $BackupDestinationdir -Force -ErrorAction SilentlyContinue
-        $SumMB+=$colItems.Sum.ToString()
+        <#
+		Copy-Item -Path $Backup -Destination $BackupDestinationdir -Force -ErrorAction SilentlyContinue
+        #>
+		$SumMB+=$colItems.Sum.ToString()
         $SumItems+=$colItems.Count
     }
 
@@ -178,6 +180,9 @@ Function Make-Backup {
             $Index=[array]::IndexOf($BackupDestinationdirs,$Backup)+1
             $Text="Copy data Location {0} of {1}" -f $Index ,$BackupDestinationdirs.Count
             Write-Progress -Activity $Text $status -PercentComplete ($Items / $SumMB*100)  
+			
+			Logging "INFO" "$Temp $status"
+			
             if ($File.Attributes -ne "Directory") {$count++}
         }
     }
