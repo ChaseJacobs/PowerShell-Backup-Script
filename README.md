@@ -2,14 +2,17 @@
  Name: BackupScript.ps1                              
  Creator: Chase Jacobs
  CreationDate: 2020.02.11                              
- LastModified: 2020.02.11                               
- Version: 1
-########################################################
+ LastModified: 2020.08.06                               
+ Version: 2
+
 
 Description: Copies the Bakupdirs to the Destination
 You can configure more than one Backupdirs, every Dir
-wil be copied to the Destination. A Progress Bar
-is showing the Status of copied MB to the total MB
-Only Change Variables in Variables Section
-Change LoggingLevel to 3 an get more output in Powershell Windows
+wil be copied to the Destination. 
 
+Backup will keep up to 5 of the previous backups for redundancy. 
+But this is configurable.
+
+Change LoggingLevel to 3 an get more output in Powershell Windows.
+
+Future: zip up files first for better transfer speeds and storage size
