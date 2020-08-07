@@ -1,4 +1,3 @@
-########################################################
  Forked from: http://www.techguy.at/tag/backupscript/
  Name: BackupScript.ps1                              
  Creator: Chase Jacobs
